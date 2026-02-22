@@ -7,6 +7,14 @@ class AthingsCard extends HTMLElement {
       battery_entity: "sensor.arbeitszimmer_battery",
       updated_entity: "sensor.arbeitszimmer_last_update",
       columns: 3,
+      show: {
+        radon: true,
+        pm25: true,
+        co2: true,
+        humidity: true,
+        temperature: true,
+        voc: true,
+      },
     };
   }
 
@@ -398,6 +406,9 @@ class AthingsCard extends HTMLElement {
     if (!stateObj) return null;
 
     const meta = this._inferSensorMeta(stateObj, spec);
+    if (spec.enabled === false) return null;
+    if (!this._isSensorVisible(meta.key, entityId)) return null;
+
     const numeric = this._toNumber(stateObj.state);
     const precision = typeof spec.precision === "number" ? spec.precision : meta.precision;
     const value = Number.isFinite(numeric)
@@ -409,6 +420,7 @@ class AthingsCard extends HTMLElement {
       label: spec.label || meta.label,
       icon: spec.icon || meta.icon,
       value,
+      sensorKey: meta.key,
       topUnit: spec.top_unit ?? meta.topUnit,
       inlineUnit: spec.unit ?? meta.inlineUnit,
       dotColor: spec.dot_color || meta.dotColor,
@@ -424,14 +436,14 @@ class AthingsCard extends HTMLElement {
     const normalized = key.toLowerCase();
 
     const map = [
-      { match: ["radon"], label: "Radon", icon: "mdi:radioactive", topUnit: "Bq/m3", inlineUnit: "", dotColor: "#d94141", precision: 0 },
-      { match: ["pm25", "pm_2_5", "pm2_5"], label: "PM 2.5", icon: "mdi:dots-hexagon", topUnit: "µg/m3", inlineUnit: "", dotColor: "#f4b400", precision: 0 },
-      { match: ["co2"], label: "CO2", icon: "mdi:cloud-outline", topUnit: "ppm", inlineUnit: "", dotColor: "" , precision: 0 },
-      { match: ["humidity"], label: "Feuchte", icon: "mdi:water-percent", topUnit: "", inlineUnit: "%", dotColor: "", precision: 0 },
-      { match: ["temperature", "temp"], label: "Temp", icon: "mdi:thermometer", topUnit: "", inlineUnit: "°", dotColor: "", precision: 0 },
-      { match: ["voc"], label: "VOC", icon: "mdi:weather-windy", topUnit: "ppb", inlineUnit: "", dotColor: "#f4b400", precision: 0 },
-      { match: ["pressure"], label: "Druck", icon: "mdi:gauge", topUnit: unit, inlineUnit: "", dotColor: "", precision: 0 },
-      { match: ["illuminance", "light"], label: "Licht", icon: "mdi:brightness-6", topUnit: unit, inlineUnit: "", dotColor: "", precision: 0 },
+      { key: "radon", match: ["radon"], label: "Radon", icon: "mdi:radioactive", topUnit: "Bq/m3", inlineUnit: "", dotColor: "#d94141", precision: 0 },
+      { key: "pm25", match: ["pm25", "pm_2_5", "pm2_5"], label: "PM 2.5", icon: "mdi:dots-hexagon", topUnit: "µg/m3", inlineUnit: "", dotColor: "#f4b400", precision: 0 },
+      { key: "co2", match: ["co2"], label: "CO2", icon: "mdi:cloud-outline", topUnit: "ppm", inlineUnit: "", dotColor: "", precision: 0 },
+      { key: "humidity", match: ["humidity"], label: "Feuchte", icon: "mdi:water-percent", topUnit: "", inlineUnit: "%", dotColor: "", precision: 0 },
+      { key: "temperature", match: ["temperature", "temp"], label: "Temp", icon: "mdi:thermometer", topUnit: "", inlineUnit: "°", dotColor: "", precision: 0 },
+      { key: "voc", match: ["voc"], label: "VOC", icon: "mdi:weather-windy", topUnit: "ppb", inlineUnit: "", dotColor: "#f4b400", precision: 0 },
+      { key: "pressure", match: ["pressure"], label: "Druck", icon: "mdi:gauge", topUnit: unit, inlineUnit: "", dotColor: "", precision: 0 },
+      { key: "illuminance", match: ["illuminance", "light"], label: "Licht", icon: "mdi:brightness-6", topUnit: unit, inlineUnit: "", dotColor: "", precision: 0 },
     ];
 
     const byName = map.find((item) => item.match.some((m) => normalized.includes(m)));
@@ -440,17 +452,22 @@ class AthingsCard extends HTMLElement {
     }
 
     if (deviceClass === "temperature") {
-      return { label: attrs.friendly_name || "Temp", icon: "mdi:thermometer", topUnit: "", inlineUnit: unit || "°", dotColor: "", precision: 0 };
+      return { key: "temperature", label: "Temp", icon: "mdi:thermometer", topUnit: "", inlineUnit: unit || "°", dotColor: "", precision: 0 };
     }
     if (deviceClass === "humidity") {
-      return { label: attrs.friendly_name || "Feuchte", icon: "mdi:water-percent", topUnit: "", inlineUnit: unit || "%", dotColor: "", precision: 0 };
+      return { key: "humidity", label: "Feuchte", icon: "mdi:water-percent", topUnit: "", inlineUnit: unit || "%", dotColor: "", precision: 0 };
     }
     if (deviceClass === "carbon_dioxide") {
-      return { label: "CO2", icon: "mdi:molecule-co2", topUnit: unit || "ppm", inlineUnit: "", dotColor: "", precision: 0 };
+      return { key: "co2", label: "CO2", icon: "mdi:molecule-co2", topUnit: unit || "ppm", inlineUnit: "", dotColor: "", precision: 0 };
     }
 
+    const fallbackLabel = this._sanitizeSensorLabel(
+      spec.label || attrs.friendly_name || key.replaceAll("_", " ")
+    );
+
     return {
-      label: spec.label || attrs.friendly_name || key.replaceAll("_", " "),
+      key: this._guessSensorKey(entityId, deviceClass),
+      label: fallbackLabel,
       icon: spec.icon || attrs.icon || "mdi:chart-line",
       topUnit: unit && unit !== "%" && unit !== "°C" ? unit : "",
       inlineUnit: unit === "%" ? "%" : (unit === "°C" ? "°" : ""),
@@ -473,6 +490,57 @@ class AthingsCard extends HTMLElement {
     ];
     const found = order.find(([needle]) => value.includes(needle));
     return found ? found[1] : 999;
+  }
+
+  _isSensorVisible(sensorKey, entityId) {
+    const show = this._config?.show;
+    if (!show || typeof show !== "object") return true;
+
+    if (sensorKey && Object.prototype.hasOwnProperty.call(show, sensorKey)) {
+      return show[sensorKey] !== false;
+    }
+
+    if (entityId && Object.prototype.hasOwnProperty.call(show, entityId)) {
+      return show[entityId] !== false;
+    }
+
+    return true;
+  }
+
+  _guessSensorKey(entityId, deviceClass) {
+    const value = String(entityId || "").toLowerCase();
+    if (value.includes("radon")) return "radon";
+    if (value.includes("pm25") || value.includes("pm_2_5") || value.includes("pm2_5")) return "pm25";
+    if (value.includes("co2") || deviceClass === "carbon_dioxide") return "co2";
+    if (value.includes("humidity") || deviceClass === "humidity") return "humidity";
+    if (value.includes("temperature") || value.includes("temp") || deviceClass === "temperature") return "temperature";
+    if (value.includes("voc")) return "voc";
+    if (value.includes("pressure")) return "pressure";
+    if (value.includes("illuminance") || value.includes("light")) return "illuminance";
+    return "";
+  }
+
+  _sanitizeSensorLabel(label) {
+    let value = String(label || "").trim();
+    if (!value) return value;
+
+    const removalParts = [
+      this._config?.title,
+      this._config?.subtitle,
+      this._config?.device_name,
+    ]
+      .filter(Boolean)
+      .map((part) => String(part).trim())
+      .filter((part) => part.length >= 2);
+
+    removalParts.forEach((part) => {
+      const escaped = part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      value = value
+        .replace(new RegExp(`^${escaped}[\\s:_-]*`, "i"), "")
+        .replace(new RegExp(`[\\s:_-]*${escaped}$`, "i"), "");
+    });
+
+    return value.trim() || String(label || "").trim();
   }
 
   _formatNumber(value, precision) {

@@ -41,6 +41,13 @@ battery_entity: sensor.arbeitszimmer_battery
 updated_entity: sensor.arbeitszimmer_last_update
 header_chip_text: View Plus
 columns: 3
+show:
+  radon: true
+  pm25: true
+  co2: true
+  humidity: true
+  temperature: true
+  voc: false
 ```
 
 ## Beispiel 2: Manuell definierte Sensoren
@@ -91,6 +98,7 @@ entities:
 - `battery_entity` (string): Entität für Akkuanzeige
 - `updated_entity` (string): Entität mit Zeitstempel der letzten Synchronisation
 - `columns` (number): Spaltenanzahl (1-4, Standard `3`)
+- `show` (object): Sensoren pro Typ ein-/ausblenden (z. B. `voc: false`)
 - `entities` (array): Manuelle Sensor-Definitionen
 
 ### `entities[]` Felder
@@ -102,6 +110,7 @@ entities:
 - `unit` (string): Einheit inline neben der Zahl
 - `dot_color` (string): Farbpunktsymbol vor dem Label
 - `precision` (number): Dezimalstellen
+- `enabled` (boolean): Einzelnen manuell definierten Sensor ein-/ausblenden
 
 ## GitHub / HACS Hinweise
 
