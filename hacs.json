@@ -1,0 +1,7 @@
+{
+  "name": "Athings Card",
+  "content_in_root": true,
+  "filename": "athings-card.js",
+  "homeassistant": "2023.1.0",
+  "render_readme": true
+}
