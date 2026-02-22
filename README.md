@@ -48,6 +48,15 @@ show:
   humidity: true
   temperature: true
   voc: false
+thresholds:
+  co2:
+    warn: 900
+    alert: 1400
+  humidity:
+    warn_low: 35
+    warn_high: 55
+    alert_low: 25
+    alert_high: 65
 ```
 
 ## Beispiel 2: Manuell definierte Sensoren
@@ -74,6 +83,9 @@ entities:
     label: CO2
     icon: mdi:cloud-outline
     top_unit: ppm
+    thresholds:
+      warn: 900
+      alert: 1400
   - entity: sensor.arbeitszimmer_humidity
     label: FEUCHTE
     icon: mdi:water-percent
@@ -87,6 +99,7 @@ entities:
     icon: mdi:weather-windy
     top_unit: ppb
     dot_color: "#f4b400"
+    enabled: false
 ```
 
 ## Konfiguration
@@ -99,6 +112,7 @@ entities:
 - `updated_entity` (string): Entität mit Zeitstempel der letzten Synchronisation
 - `columns` (number): Spaltenanzahl (1-4, Standard `3`)
 - `show` (object): Sensoren pro Typ ein-/ausblenden (z. B. `voc: false`)
+- `thresholds` (object): Grenzwerte pro Sensortyp für grün/gelb/rot
 - `entities` (array): Manuelle Sensor-Definitionen
 
 ### `entities[]` Felder
@@ -111,6 +125,26 @@ entities:
 - `dot_color` (string): Farbpunktsymbol vor dem Label
 - `precision` (number): Dezimalstellen
 - `enabled` (boolean): Einzelnen manuell definierten Sensor ein-/ausblenden
+- `thresholds` (object): Grenzwerte nur für diesen Sensor überschreiben
+
+## Farb-Logik / Grenzwerte
+
+Die Karte färbt Messwerte jetzt automatisch:
+
+- `grün` = OK
+- `gelb` = Warnung
+- `rot` = kritisch
+
+Standardmäßig sind sinnvolle Richtwerte hinterlegt (konfigurierbar), z. B.:
+
+- `radon`: gelb ab `100`, rot ab `150`
+- `pm25`: gelb ab `15`, rot ab `35`
+- `co2`: gelb ab `1000`, rot ab `1500`
+- `voc`: gelb ab `250`, rot ab `500`
+- `humidity`: Komfortbereich mit Unter-/Obergrenzen
+- `temperature`: Komfortbereich mit Unter-/Obergrenzen
+
+Hinweis: Das sind praxisnahe UI-Defaultwerte für die Darstellung, keine medizinische oder behördliche Bewertung. Du kannst sie pro Karte oder pro Sensor anpassen.
 
 ## GitHub / HACS Hinweise
 

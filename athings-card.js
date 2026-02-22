@@ -15,6 +15,14 @@ class AthingsCard extends HTMLElement {
         temperature: true,
         voc: true,
       },
+      thresholds: {
+        radon: { warn: 100, alert: 150 },
+        pm25: { warn: 15, alert: 35 },
+        co2: { warn: 1000, alert: 1500 },
+        voc: { warn: 250, alert: 500 },
+        humidity: { warn_low: 30, warn_high: 60, alert_low: 20, alert_high: 70 },
+        temperature: { warn_low: 18, warn_high: 26, alert_low: 16, alert_high: 30 },
+      },
     };
   }
 
@@ -348,6 +356,9 @@ class AthingsCard extends HTMLElement {
       const icon = document.createElement("div");
       icon.className = "sensor-icon";
       icon.innerHTML = `<ha-icon icon="${sensor.icon}"></ha-icon>`;
+      if (sensor.statusColor) {
+        icon.style.color = sensor.statusColor;
+      }
 
       const content = document.createElement("div");
 
@@ -358,10 +369,14 @@ class AthingsCard extends HTMLElement {
       const valueLine = document.createElement("div");
       valueLine.className = "sensor-value";
       valueLine.innerHTML = `<strong>${sensor.value}</strong>${sensor.inlineUnit ? `<span class="inline-unit">${sensor.inlineUnit}</span>` : ""}`;
+      if (sensor.statusColor) {
+        valueLine.style.color = sensor.statusColor;
+      }
 
       const labelLine = document.createElement("div");
       labelLine.className = "sensor-label";
-      labelLine.innerHTML = `${sensor.dotColor ? `<span class="dot" style="--dot-color:${sensor.dotColor};"></span>` : ""}<span>${sensor.label}</span>`;
+      const labelDot = sensor.statusColor || sensor.dotColor;
+      labelLine.innerHTML = `${labelDot ? `<span class="dot" style="--dot-color:${labelDot};"></span>` : ""}<span>${sensor.label}</span>`;
 
       if (!sensor.topUnit) {
         unitLine.style.visibility = "hidden";
@@ -414,6 +429,9 @@ class AthingsCard extends HTMLElement {
     const value = Number.isFinite(numeric)
       ? this._formatNumber(numeric, precision)
       : (stateObj.state ?? "-");
+    const status = Number.isFinite(numeric)
+      ? this._evaluateSensorStatus(meta.key, numeric, spec.thresholds)
+      : null;
 
     return {
       entityId,
@@ -421,6 +439,8 @@ class AthingsCard extends HTMLElement {
       icon: spec.icon || meta.icon,
       value,
       sensorKey: meta.key,
+      status,
+      statusColor: status ? this._statusColor(status) : "",
       topUnit: spec.top_unit ?? meta.topUnit,
       inlineUnit: spec.unit ?? meta.inlineUnit,
       dotColor: spec.dot_color || meta.dotColor,
@@ -549,6 +569,77 @@ class AthingsCard extends HTMLElement {
       minimumFractionDigits: p,
       maximumFractionDigits: p,
     }).format(value);
+  }
+
+  _evaluateSensorStatus(sensorKey, value, overrideThresholds) {
+    const cfg = this._resolveThresholdConfig(sensorKey, overrideThresholds);
+    if (!cfg || typeof cfg !== "object") return null;
+
+    if (cfg.disabled === true) return null;
+
+    // Range mode: good range in the middle, bad outside.
+    if (
+      Number.isFinite(cfg.warn_low) ||
+      Number.isFinite(cfg.warn_high) ||
+      Number.isFinite(cfg.alert_low) ||
+      Number.isFinite(cfg.alert_high)
+    ) {
+      if (Number.isFinite(cfg.alert_low) && value < cfg.alert_low) return "alert";
+      if (Number.isFinite(cfg.alert_high) && value > cfg.alert_high) return "alert";
+      if (Number.isFinite(cfg.warn_low) && value < cfg.warn_low) return "warn";
+      if (Number.isFinite(cfg.warn_high) && value > cfg.warn_high) return "warn";
+      return "ok";
+    }
+
+    // Upper-threshold mode: higher values are worse.
+    if (Number.isFinite(cfg.alert) && value >= cfg.alert) return "alert";
+    if (Number.isFinite(cfg.warn) && value >= cfg.warn) return "warn";
+    return "ok";
+  }
+
+  _resolveThresholdConfig(sensorKey, overrideThresholds) {
+    if (overrideThresholds && typeof overrideThresholds === "object") {
+      return overrideThresholds;
+    }
+
+    const defaults = this._defaultThresholds();
+    const userThresholds = this._config?.thresholds || {};
+    if (!sensorKey) return null;
+
+    const base = defaults[sensorKey];
+    const user = userThresholds[sensorKey];
+
+    if (user === false || user?.disabled === true) {
+      return { disabled: true };
+    }
+
+    if (base && user && typeof user === "object") {
+      return { ...base, ...user };
+    }
+
+    if (user && typeof user === "object") {
+      return user;
+    }
+
+    return base || null;
+  }
+
+  _defaultThresholds() {
+    return {
+      radon: { warn: 100, alert: 150 },
+      pm25: { warn: 15, alert: 35 },
+      co2: { warn: 1000, alert: 1500 },
+      voc: { warn: 250, alert: 500 },
+      humidity: { warn_low: 30, warn_high: 60, alert_low: 20, alert_high: 70 },
+      temperature: { warn_low: 18, warn_high: 26, alert_low: 16, alert_high: 30 },
+    };
+  }
+
+  _statusColor(status) {
+    if (status === "alert") return "var(--error-color, #d94141)";
+    if (status === "warn") return "var(--warning-color, #f4b400)";
+    if (status === "ok") return "var(--success-color, #2db84d)";
+    return "";
   }
 
   _formatRelative(stateObj) {
