@@ -17,11 +17,11 @@ class AthingsCard extends HTMLElement {
       },
       thresholds: {
         radon: { warn: 100, alert: 150 },
-        pm25: { warn: 15, alert: 35 },
-        co2: { warn: 1000, alert: 1500 },
-        voc: { warn: 250, alert: 500 },
-        humidity: { warn_low: 30, warn_high: 60, alert_low: 20, alert_high: 70 },
-        temperature: { warn_low: 18, warn_high: 26, alert_low: 16, alert_high: 30 },
+        pm25: { warn: 10, alert: 25 },
+        co2: { warn: 800, alert: 1000 },
+        voc: { warn: 250, alert: 2000 },
+        humidity: { warn_low: 30, warn_high: 60, alert_low: 25, alert_high: 70 },
+        temperature: { alert_low: 18, alert_high: 25 },
       },
     };
   }
@@ -627,11 +627,11 @@ class AthingsCard extends HTMLElement {
   _defaultThresholds() {
     return {
       radon: { warn: 100, alert: 150 },
-      pm25: { warn: 15, alert: 35 },
-      co2: { warn: 1000, alert: 1500 },
-      voc: { warn: 250, alert: 500 },
-      humidity: { warn_low: 30, warn_high: 60, alert_low: 20, alert_high: 70 },
-      temperature: { warn_low: 18, warn_high: 26, alert_low: 16, alert_high: 30 },
+      pm25: { warn: 10, alert: 25 },
+      co2: { warn: 800, alert: 1000 },
+      voc: { warn: 250, alert: 2000 },
+      humidity: { warn_low: 30, warn_high: 60, alert_low: 25, alert_high: 70 },
+      temperature: { alert_low: 18, alert_high: 25 },
     };
   }
 

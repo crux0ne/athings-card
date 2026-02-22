@@ -135,16 +135,16 @@ Die Karte färbt Messwerte jetzt automatisch:
 - `gelb` = Warnung
 - `rot` = kritisch
 
-Standardmäßig sind sinnvolle Richtwerte hinterlegt (konfigurierbar), z. B.:
+Standardmäßig sind Airthings-nahe Grenzwerte hinterlegt (konfigurierbar), z. B.:
 
 - `radon`: gelb ab `100`, rot ab `150`
-- `pm25`: gelb ab `15`, rot ab `35`
-- `co2`: gelb ab `1000`, rot ab `1500`
-- `voc`: gelb ab `250`, rot ab `500`
-- `humidity`: Komfortbereich mit Unter-/Obergrenzen
-- `temperature`: Komfortbereich mit Unter-/Obergrenzen
+- `pm25`: gelb ab `10`, rot ab `25`
+- `co2`: gelb ab `800`, rot ab `1000`
+- `voc`: gelb ab `250`, rot ab `2000`
+- `humidity`: grün `30-60`, gelb `25-30` / `60-70`, rot `<25` / `>70`
+- `temperature`: grün `18-25`, rot `<18` / `>25` (ohne gelbe Stufe)
 
-Hinweis: Das sind praxisnahe UI-Defaultwerte für die Darstellung, keine medizinische oder behördliche Bewertung. Du kannst sie pro Karte oder pro Sensor anpassen.
+Hinweis: Die Werte dienen der Farb-/Statusdarstellung in der Karte und bleiben pro Karte oder pro Sensor vollständig überschreibbar.
 
 ## GitHub / HACS Hinweise
 
